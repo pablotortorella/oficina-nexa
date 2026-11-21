@@ -10,9 +10,9 @@ Está basada en **[la Oficina de Jules](https://www.elkis.dev/guias/oficina-de-j
 ## Qué cambia respecto del original
 
 - **Agentes que trabajan de verdad** (en `http://127.0.0.1:5180/`): Andrés (redactor de contenido),
-  Víctor (investigador, con búsqueda web) y Joaquín (diseñador de talleres). Les encargás algo y
-  entregan un Markdown que aprobás, corregís o descartás. Trabajan con la IA que elijas, para toda la
-  oficina o por agente:
+  Víctor (investigador, con búsqueda web), Joaquín (diseñador de talleres), Valeria (ejecutiva
+  comercial) y Diana (contadora). Les encargás algo y entregan un Markdown que aprobás, corregís o
+  descartás. Trabajan con la IA que elijas, para toda la oficina o por agente:
   - **ChatGPT** con [Codex](https://github.com/openai/codex), usando tu plan (sin clave de API).
   - **Claude** con [Claude Code](https://docs.claude.com/en/docs/claude-code), usando tu suscripción.
   - **Compatible con OpenAI**: [DeepSeek](https://platform.deepseek.com) con clave de API, u

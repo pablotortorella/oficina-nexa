@@ -59,6 +59,7 @@ export const PERFILES: Record<string, PerfilIdle> = {
   'Editor de video': contenido,
   Community: contenido,
   Contador: papeles,
+  Contadora: papeles,
   Planificador: { ...papeles, pesos: { revisar_papeles: 4, respirar: 3, tamborilear: 2 } },
   Cobranza: { ...ventas, pesos: { telefono: 4, revisar_papeles: 2, respirar: 3 } },
   'Asistente personal': {

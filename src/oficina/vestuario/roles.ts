@@ -20,6 +20,7 @@ export const LOOK_POR_ROL: Record<string, Partial<Atuendo>> = {
   'Editor de video': { top: 'poleron', topColor: '#151719', hair: 'corto', acc: ['gorra'] },
   Community: { top: 'polera', topColor: '#d9825f', hair: 'largo', acc: [], print: '♥' },
   Contador: { top: 'camisa', topColor: '#e9ecef', hair: 'rapado', acc: ['lentes', 'taza'] },
+  Contadora: { top: 'camisa', topColor: '#e9ecef', hair: 'mono', acc: ['lentes'] },
   Planificador: { top: 'blazer', topColor: '#3f6b52', hair: 'mono', acc: [] },
   Cobranza: { top: 'polera', topColor: '#79b98a', hair: 'corto', acc: [] },
   'Asistente personal': { top: 'blazer', topColor: '#8a5a2b', hair: 'mono', acc: [] },

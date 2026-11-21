@@ -52,7 +52,7 @@ Dos modos de la página, elegidos en `src/app/main.tsx`:
 ### Oficina que trabaja (flujo de una tarea)
 
 - `servidor/trabajo/agentes.ts` define los agentes reales (`AGENTES_TRABAJO`: redactor,
-  investigador, talleres, comercial) con su `oficio` (prompt), carpeta, si tienen web y la
+  investigador, talleres, comercial, contadora) con su `oficio` (prompt), carpeta, si tienen web y la
   plantilla de `contexto.md`. Agregar un agente es agregarlo acá; el front los recibe por la API.
 - `servidor/trabajo/oficina.ts` (`OficinaDeTrabajo`): una cola por agente, estados
   `esperando_aprobacion → en_cola → trabajando → para_revisar → aprobada|descartada|error`.
