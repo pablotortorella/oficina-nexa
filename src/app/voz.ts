@@ -1,4 +1,5 @@
 import { partirParaVoz, textoParaVoz } from './voz-texto';
+import { zonaActual } from './zona';
 
 /**
  * Voz de Nexa en el navegador.
@@ -86,7 +87,7 @@ class VozNexa {
     }
   }
 
-  /** Saluda según la hora de Bogotá, con el saludo estirado que arma el servidor. */
+  /** Saluda según la hora local de la oficina, con el saludo estirado que arma el servidor. */
   async saludar(): Promise<void> {
     this.detener();
     const turno = this.turno;
@@ -203,10 +204,10 @@ class VozNexa {
 
 export const vozNexa = new VozNexa();
 
-/** Saludo según la hora de Bogotá, estirado como lo diría Nexa. */
+/** Saludo según la hora local de la oficina, estirado como lo diría Nexa. */
 export function saludoDeNexa(ahora = new Date()): { momento: 'dia' | 'tarde' | 'noche'; texto: string } {
   const hora = Number(
-    new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: '2-digit', hourCycle: 'h23' }).format(ahora),
+    new Intl.DateTimeFormat('en-GB', { timeZone: zonaActual(), hour: '2-digit', hourCycle: 'h23' }).format(ahora),
   );
   if (hora >= 5 && hora < 12) return { momento: 'dia', texto: '¡Buen díííaaa!' };
   if (hora >= 12 && hora < 19) return { momento: 'tarde', texto: '¡Buenas tardeeees!' };

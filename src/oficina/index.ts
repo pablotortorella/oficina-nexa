@@ -20,7 +20,7 @@ export { paqueteNavidad } from './catalogo/navidad';
 export { crearCatalogo, registrarPaquete } from './catalogo/registro';
 export { alternarPieza, aplicarSkin, resolverAtuendo } from './vestuario/resolver';
 export { atuendoPorRol } from './vestuario/roles';
-export { horaChile, luzDelDia } from './ambiente/hora';
+export { fijarZonaHoraria, horaChile, luzDelDia, zonaHoraria } from './ambiente/hora';
 export type { PresenciaJules } from './animacion/presencia';
 export { frameloopPara } from './rendimiento/visibilidad';
 export { plano } from './mansion/plano';

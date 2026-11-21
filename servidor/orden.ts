@@ -312,7 +312,8 @@ async function llamarACodex(
       timeoutMs: TIMEOUT_CODEX_MS,
     });
     if ('texto' in resultado) return { texto: recortar(resultado.texto) };
-    return { motivo: resultado.motivo === 'cancelado' ? 'timeout' : resultado.motivo };
+    const m = resultado.motivo;
+    return { motivo: m === 'cancelado' ? 'timeout' : m === 'sin_conexion' || m === 'sin_configurar' ? 'error_api' : m };
   } catch (error) {
     console.warn(`[orden] fallo de codex (${error instanceof Error ? error.name : 'desconocido'})`);
     return { motivo: 'error_api' };

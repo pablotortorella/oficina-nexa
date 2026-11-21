@@ -6,6 +6,7 @@ import { textoPlano } from './Markdown';
 import {
   actuar,
   encargar,
+  tomarOficina,
   TEXTO_ESTADO,
   tareaActiva,
   tareasDe,
@@ -14,6 +15,7 @@ import {
   type EstadoOficina,
   type Tarea,
 } from './trabajo';
+import { zonaActual } from './zona';
 
 type EstadoMic = 'reposo' | 'escuchando' | 'pensando';
 
@@ -42,27 +44,46 @@ function transcurrido(desde: string | undefined, ahora: number): string {
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleString('es-AR', {
-    timeZone: 'America/Bogota',
+    timeZone: zonaActual(),
     day: 'numeric',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
   });
 
-/** Aviso de solo mirar cuando la oficina está abierta en otra computadora. */
-function AvisoOtraCompu({ oficina }: { oficina: EstadoOficina | null }) {
+/** Aviso de solo mirar cuando la oficina está abierta en otra computadora, con el botón para tomarla. */
+function AvisoOtraCompu({ oficina, onCambio }: { oficina: EstadoOficina | null; onCambio: () => void }) {
+  const [tomando, setTomando] = useState(false);
   const otra = oficina?.abiertaEn;
   if (!otra) return null;
   const hora = new Date(otra.desde).toLocaleTimeString('es-AR', {
-    timeZone: 'America/Bogota',
+    timeZone: zonaActual(),
     hour: '2-digit',
     minute: '2-digit',
   });
   return (
-    <p className="aviso-otra-compu" role="status">
-      <strong>Solo mirar:</strong> la oficina está abierta en <b>{otra.host}</b> (desde las {hora}).
-      Cerrala allá (Ctrl + C) y en un momento podés trabajar desde acá.
-    </p>
+    <div className="aviso-otra-compu" role="status">
+      <p>
+        <strong>Solo mirar:</strong> la oficina está abierta en <b>{otra.host}</b> (desde las {hora}).
+      </p>
+      <button
+        type="button"
+        className="btn principal"
+        disabled={tomando}
+        onClick={async () => {
+          setTomando(true);
+          try {
+            await tomarOficina();
+            onCambio();
+          } finally {
+            setTomando(false);
+          }
+        }}
+      >
+        {tomando ? 'Tomando la oficina…' : 'Usar la oficina acá'}
+      </button>
+      <p className="nota">{otra.host} pasa a solo mirar en menos de un minuto. Lo que estaba haciendo sigue acá.</p>
+    </div>
   );
 }
 
@@ -131,7 +152,7 @@ export function PanelTrabajo({
   if (!agente) {
     return (
       <aside className="hud detalle trabajo" aria-live="polite">
-        <AvisoOtraCompu oficina={oficina} />
+        <AvisoOtraCompu oficina={oficina} onCambio={onCambio} />
         {sinServidor ? (
           <p className="aviso-error">
             El servidor de la oficina no responde. Revisá que esté corriendo <code>npm run dev</code>.
@@ -164,7 +185,7 @@ export function PanelTrabajo({
 
   return (
     <aside className="hud detalle trabajo" aria-live="polite">
-      <AvisoOtraCompu oficina={oficina} />
+      <AvisoOtraCompu oficina={oficina} onCambio={onCambio} />
       <div>
         <h2>{agente.nombre}</h2>
         <div className="sub">

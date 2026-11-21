@@ -1,7 +1,8 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { availableParallelism, homedir, tmpdir } from 'node:os';
+import { availableParallelism, tmpdir } from 'node:os';
+import { carpetaDatos, enWindows, exe } from './comandos';
 import { join } from 'node:path';
 
 /**
@@ -12,24 +13,28 @@ import { join } from 'node:path';
  *   para dejar el modelo cargado entre dictados. Los audios se borran apenas se transcriben.
  * Sin GPU dedicada (por ejemplo, una notebook con gráficos integrados) Whisper corre en CPU con el
  * modelo cuantizado `large-v3-turbo-q5_0`: la integrada resultó más lenta que la CPU.
- * Rutas configurables con `PIPER_DIR`, `PIPER_VOZ` y `WHISPER_MODELOS`; `WHISPER_GPU=1|0` fuerza
- * o apaga la GPU.
+ * Rutas configurables con `PIPER_DIR`, `PIPER_VOZ`, `WHISPER_MODELOS` y `WHISPER_SERVER`;
+ * `WHISPER_GPU=1|0` fuerza o apaga la GPU. En Windows todo vive en %LOCALAPPDATA%\oficina-nexa.
  */
 
 export interface ConfigVoz {
   piperDir: string;
   voz: string;
   modelosWhisper: string;
+  /** Ejecutable de whisper-server (en Linux, el del sistema). */
+  whisperServer: string;
   /** `undefined` = detectar si hay GPU Vulkan dedicada. */
   gpu?: boolean;
 }
 
 export function configVoz(env: Record<string, string | undefined>): ConfigVoz {
   return {
-    piperDir: env.PIPER_DIR?.trim() || join(homedir(), '.local', 'share', 'piper'),
+    piperDir: env.PIPER_DIR?.trim() || carpetaDatos('piper'),
     voz: env.PIPER_VOZ?.trim() || 'es_AR-daniela-high',
-    modelosWhisper:
-      env.WHISPER_MODELOS?.trim() || join(homedir(), '.local', 'share', 'whisper-cpp-models'),
+    modelosWhisper: env.WHISPER_MODELOS?.trim() || carpetaDatos('whisper-cpp-models'),
+    whisperServer:
+      env.WHISPER_SERVER?.trim() ||
+      (enWindows ? carpetaDatos('whisper', 'whisper-server.exe') : 'whisper-server'),
     ...(env.WHISPER_GPU?.trim() === '1' ? { gpu: true } : env.WHISPER_GPU?.trim() === '0' ? { gpu: false } : {}),
   };
 }
@@ -65,7 +70,7 @@ export class Voz {
   constructor(private readonly config: ConfigVoz) {}
 
   private get piper() {
-    return join(this.config.piperDir, 'bin', 'piper', 'piper');
+    return join(this.config.piperDir, 'bin', 'piper', exe('piper'));
   }
 
   private get modeloVoz() {
@@ -105,7 +110,9 @@ export class Voz {
   }
 
   get puedeEscuchar() {
-    return this.modeloWhisper !== null;
+    const servidor = this.config.whisperServer;
+    const hayServidor = servidor.includes('/') || servidor.includes('\\') ? existsSync(servidor) : true;
+    return this.modeloWhisper !== null && hayServidor;
   }
 
   /** Texto → WAV con Piper. De a una síntesis por vez: Piper ya usa todos los núcleos. */
@@ -185,7 +192,7 @@ export class Voz {
       '--host', '127.0.0.1',
       '--port', String(PUERTO_WHISPER),
     ];
-    this.whisper = spawn('whisper-server', args, { stdio: 'ignore' });
+    this.whisper = spawn(this.config.whisperServer, args, { stdio: 'ignore' });
     this.whisper.on('exit', () => {
       this.whisper = null;
       this.whisperListo = null;
@@ -233,7 +240,7 @@ export class Voz {
   }
 
   detener() {
-    this.whisper?.kill('SIGTERM');
+    this.whisper?.kill();
     this.whisper = null;
     this.whisperListo = null;
   }

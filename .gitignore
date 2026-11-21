@@ -8,3 +8,7 @@ dist
 # (ver LICENCIAS.md). Copialas del zip original de Elkis Dev para tener el recorrido con voz.
 public/presentacion/**/*.mp3
 public/presentacion/dueto-recorrido.alineacion.json
+
+# Configuración local (nombre, motor y, si usás DeepSeek, tu clave de API).
+oficina.config.json
+oficina.config.json.tmp

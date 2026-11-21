@@ -31,7 +31,10 @@ export interface Tarea {
   motivoAprobacion?: string;
   comentario?: string;
   resumen?: string;
+  motor?: Motor;
 }
+
+export type Motor = 'codex' | 'claude' | 'compatible';
 
 export interface AgenteTrabajo {
   id: string;
@@ -64,6 +67,25 @@ export interface EstadoOficina {
   cupo?: Cupo | null;
   /** La oficina está abierta en otra computadora: desde acá solo se mira. */
   abiertaEn?: { host: string; desde: string; latido: string };
+  /** Motor de la oficina y su nombre para mostrar. */
+  motor?: Motor;
+  nombreMotor?: string;
+}
+
+export interface ConfigOficina {
+  nombre?: string;
+  espacio?: string;
+  motor?: Motor;
+  motorPorAgente?: Record<string, Motor>;
+  codex?: { modelo?: string };
+  claude?: { modelo?: string };
+  compatible: { preset?: 'deepseek' | 'ollama' | 'otro'; url?: string; modelo?: string; claveGuardada: boolean };
+}
+
+export interface DatosConfig {
+  config: ConfigOficina;
+  motores: { id: Motor; nombre: string }[];
+  presets: Record<'deepseek' | 'ollama' | 'otro', { url: string; modelo: string; nombre: string }>;
 }
 
 export type AccionTarea = 'iniciar' | 'aprobar' | 'cambios' | 'descartar' | 'cancelar' | 'reintentar';
@@ -83,6 +105,15 @@ async function pedir<T>(ruta: string, cuerpo?: unknown): Promise<T> {
 }
 
 export const leerOficina = () => pedir<EstadoOficina>(RUTA);
+
+export const leerConfiguracion = () => pedir<DatosConfig>(`${RUTA}/config`);
+
+/** Guarda cambios de configuración. `clave` vacía no borra la guardada; `borrarClave` sí. */
+export const guardarConfiguracion = (cambios: Record<string, unknown>) =>
+  pedir<{ config: ConfigOficina }>(`${RUTA}/config`, cambios);
+
+/** «Usar la oficina acá»: esta computadora pasa a trabajar y la otra a solo mirar. */
+export const tomarOficina = () => pedir<{ ok: true }>(`${RUTA}/tomar`, {});
 
 export const encargar = (agenteId: string, encargo: string) =>
   pedir<{ tarea: Tarea }>(`${RUTA}/tareas`, { agenteId, encargo });

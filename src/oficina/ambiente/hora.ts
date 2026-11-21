@@ -1,19 +1,35 @@
-const FORMATO_SANTIAGO = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'America/Bogota',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hourCycle: 'h23',
-});
+/** Zona horaria de la escena: la de la computadora, salvo que se fije otra con `fijarZonaHoraria`. */
+let zona = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Bogota';
+let formato = crearFormato(zona);
+
+function crearFormato(z: string) {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: z,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  });
+}
+
+/** Cambia la zona horaria de la escena (luz, saludo). Ignora zonas inválidas. */
+export function fijarZonaHoraria(nueva: string): void {
+  try {
+    formato = crearFormato(nueva);
+    zona = nueva;
+  } catch {
+    // Zona desconocida: se queda con la anterior.
+  }
+}
+
+export const zonaHoraria = () => zona;
 
 /**
- * Hora decimal (0 ≤ h < 24) en America/Bogota (GMT-5) para una fecha; nunca UTC.
- * El nombre `horaChile` quedó del original, que usaba America/Santiago.
+ * Hora decimal (0 ≤ h < 24) en la zona horaria de la escena para una fecha; nunca UTC.
+ * El nombre `horaChile` quedó del original, que usaba siempre America/Santiago.
  */
 export function horaChile(fecha: Date): number {
-  const partes = Object.fromEntries(
-    FORMATO_SANTIAGO.formatToParts(fecha).map((p) => [p.type, p.value]),
-  );
+  const partes = Object.fromEntries(formato.formatToParts(fecha).map((p) => [p.type, p.value]));
   return Number(partes['hour']) + Number(partes['minute']) / 60 + Number(partes['second']) / 3600;
 }
 

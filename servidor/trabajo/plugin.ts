@@ -1,7 +1,18 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { loadEnv, type Connect, type Plugin } from 'vite';
-import { ejecutarCodex } from '../codex';
+import {
+  compatibleEfectivo,
+  configPublica,
+  fijarRaiz,
+  guardarConfig,
+  leerConfig,
+  MOTORES,
+  NOMBRE_MOTOR,
+  PRESETS,
+  type Motor,
+} from '../config';
 import { cupoActual, leerCupoInicial } from '../cupo';
+import { ejecutar } from '../motores';
 import { esJson, esLocal, leerCuerpo, responder } from '../plugin-orden';
 import { espacioPorDefecto, OficinaDeTrabajo } from './oficina';
 
@@ -12,6 +23,8 @@ import { espacioPorDefecto, OficinaDeTrabajo } from './oficina';
  * - `POST /api/trabajo/tareas` `{ agenteId, encargo }`: nuevo encargo.
  * - `POST /api/trabajo/tareas/:id/:accion` `{ texto? }`: iniciar, aprobar, cambios,
  *   descartar, cancelar o reintentar.
+ * - `POST /api/trabajo/tomar`: usar la oficina desde esta computadora (la otra pasa a solo mirar).
+ * - `GET|POST /api/trabajo/config`: la configuración local (nombre, motores), sin claves.
  * El espacio de trabajo es `OFICINA_TRABAJO` del `.env`, o `~/Dropbox/oficina-trabajo`.
  */
 
@@ -38,14 +51,32 @@ async function leerJson(req: IncomingMessage): Promise<Record<string, unknown> |
   }
 }
 
-export function crearManejadorTrabajo(oficina: () => OficinaDeTrabajo) {
+export function crearManejadorTrabajo(
+  oficina: () => OficinaDeTrabajo,
+  entorno: () => Record<string, string> = () => ({}),
+) {
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {
       if (!esLocal(req)) return responder(res, 403, { error: 'solo desde este equipo' });
       // Connect quita el prefijo montado: aquí `url` empieza en '/'.
       const ruta = (req.url ?? '/').split('?')[0]?.replace(/\/+$/, '') ?? '';
       if (req.method === 'GET' && ruta === '') {
-        return responder(res, 200, { ...(await oficina().estado()), cupo: cupoActual() });
+        const motor = leerConfig().motor ?? 'codex';
+        return responder(res, 200, {
+          ...(await oficina().estado()),
+          motor,
+          nombreMotor: motor === 'compatible' ? compatibleEfectivo().nombre : NOMBRE_MOTOR[motor],
+          cupo: cupoActual(),
+        });
+      }
+      if (req.method === 'GET' && ruta === '/config') {
+        const publica = configPublica();
+        return responder(res, 200, {
+          // El nombre puede venir del .env de una instalación anterior.
+          config: { ...publica, nombre: publica.nombre ?? (entorno().TU_NOMBRE?.trim() || undefined) },
+          motores: MOTORES.map((id) => ({ id, nombre: NOMBRE_MOTOR[id] })),
+          presets: PRESETS,
+        });
       }
       if (req.method !== 'POST') {
         res.setHeader('allow', 'GET, POST');
@@ -54,6 +85,14 @@ export function crearManejadorTrabajo(oficina: () => OficinaDeTrabajo) {
       const cuerpo = await leerJson(req);
       if (typeof cuerpo === 'string') return responder(res, 400, { error: cuerpo });
 
+      if (ruta === '/config') {
+        guardarConfig(cuerpo);
+        return responder(res, 200, { config: configPublica() });
+      }
+      if (ruta === '/tomar') {
+        await oficina().tomar();
+        return responder(res, 200, { ok: true });
+      }
       if (ruta === '/tareas') {
         const agenteId = typeof cuerpo.agenteId === 'string' ? cuerpo.agenteId : '';
         const tarea = await oficina().crear(agenteId, cuerpo.encargo);
@@ -82,14 +121,18 @@ export function pluginTrabajo(): Plugin {
   let env: Record<string, string> = {};
   const obtener = () => {
     oficina ??= new OficinaDeTrabajo({
-      espacio: env.OFICINA_TRABAJO?.trim() || espacioPorDefecto(),
-      codex: ejecutarCodex,
-      nombre: () => env.TU_NOMBRE?.trim() || undefined,
-      modelo: () => env.CODEX_MODEL?.trim() || undefined,
+      // La carpeta se elige al arrancar: cambiarla en Configuración pide reiniciar la oficina.
+      espacio: leerConfig().espacio || env.OFICINA_TRABAJO?.trim() || espacioPorDefecto(),
+      ejecutar,
+      motorDe: (agenteId): Motor => {
+        const c = leerConfig();
+        return c.motorPorAgente?.[agenteId] ?? c.motor ?? 'codex';
+      },
+      nombre: () => leerConfig().nombre || env.TU_NOMBRE?.trim() || undefined,
     });
     return oficina;
   };
-  const atender = crearManejadorTrabajo(obtener);
+  const atender = crearManejadorTrabajo(obtener, () => env);
   const montar = ({ middlewares, httpServer }: ConMiddlewares) => {
     middlewares.use(RUTA_TRABAJO, (req, res) => void atender(req, res));
     // Arranca la oficina con el servidor para retomar lo que quedó en cola.
@@ -101,6 +144,11 @@ export function pluginTrabajo(): Plugin {
     name: 'jules-trabajo',
     configResolved(config) {
       env = loadEnv(config.mode, config.root, '');
+      fijarRaiz(config.root);
+      // El motor compatible lee su clave del .env si no está en la configuración.
+      for (const k of ['COMPATIBLE_API_KEY', 'DEEPSEEK_API_KEY'] as const) {
+        if (env[k] && !process.env[k]) process.env[k] = env[k];
+      }
     },
     configureServer: montar,
   };

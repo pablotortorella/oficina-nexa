@@ -18,7 +18,7 @@ interface Props {
   onCalidad: (c: Calidad) => void;
   visible: boolean;
   onVisible: (v: boolean) => void;
-  /** `null` = hora real de Bogotá (GMT-5). */
+  /** `null` = hora real de la zona de la oficina. */
   hora: number | null;
   onHora: (h: number | null) => void;
   /** Controles extra al final del panel. */
@@ -180,7 +180,7 @@ export function PanelFps({
               aria-pressed={hora === null}
               onClick={() => onHora(null)}
             >
-              Hora real de Bogotá
+              Hora real
             </button>
           </div>
 

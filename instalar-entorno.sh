@@ -11,13 +11,17 @@
 #
 # Qué deja listo:
 #   1. Node.js 22 o superior y las dependencias del proyecto (npm install).
-#   2. Codex CLI con tu sesión de ChatGPT (los agentes trabajan con tu plan, sin clave de API).
-#   3. ffmpeg y whisper.cpp (apt) + modelo de Whisper para dictar:
+#   2. Tus datos: nombre, carpeta de trabajo y con qué IA trabajan los agentes
+#      (se guardan en oficina.config.json; se cambian después desde ⚙ Configuración).
+#   3. El motor elegido: Codex (plan de ChatGPT), Claude Code (suscripción de Claude),
+#      DeepSeek (clave de API) u Ollama (modelo local).
+#   4. ffmpeg y whisper.cpp (apt) + modelo de Whisper para dictar:
 #        con GPU dedicada  -> ggml-large-v3-turbo.bin (1,6 GB)
 #        sin GPU dedicada  -> ggml-large-v3-turbo-q5_0.bin (574 MB), en CPU
 #      Los modelos van a ~/.local/share/whisper-cpp-models (si ya están, no se bajan de nuevo).
-#   4. Piper + la voz argentina de Nexa (es_AR-daniela-high) en ~/.local/share/piper.
-#   5. El archivo .env y la carpeta de trabajo (~/Dropbox/oficina-trabajo, la sincroniza Dropbox).
+#   5. Piper + la voz argentina de Nexa (es_AR-daniela-high) en ~/.local/share/piper.
+#   6. El archivo .env, y una prueba de voz y dictado.
+# En Windows, usá instalar-entorno.ps1.
 set -u
 
 REVISAR=0
@@ -32,7 +36,7 @@ PROYECTO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 MODELOS="${WHISPER_MODELOS:-$HOME/.local/share/whisper-cpp-models}"
 PIPER="${PIPER_DIR:-$HOME/.local/share/piper}"
 VOZ="${PIPER_VOZ:-es_AR-daniela-high}"
-ESPACIO="${OFICINA_TRABAJO:-$HOME/Dropbox/oficina-trabajo}"
+CONFIG="$PROYECTO/oficina.config.json"
 PENDIENTES=()
 
 ok() { echo "✅ $*"; }
@@ -104,28 +108,116 @@ if command -v npm >/dev/null 2>&1; then
   fi
 fi
 
-# --- 2) Codex CLI ----------------------------------------------------------------------------
-echo; echo "— 2. Codex (los agentes trabajan con tu plan de ChatGPT)"
-if command -v codex >/dev/null 2>&1; then
-  ok "Codex $(codex --version 2>/dev/null | awk '{print $NF}')"
-else
-  info "Falta Codex CLI (paquete npm @openai/codex)."
-  if confirmar "Lo instalo con npm install -g @openai/codex"; then
-    npm install -g @openai/codex && ok "Codex instalado." || falta "No pude instalar Codex (¿npm global necesita otro prefijo? probá: npm config set prefix ~/.npm-global)"
-  else
-    falta "Codex CLI"
-  fi
+# --- 2) Tus datos ----------------------------------------------------------------------------
+echo; echo "— 2. Tus datos"
+# Lee un campo de oficina.config.json (con Node, que ya está instalado en este punto).
+leer_config() {
+  [ -f "$CONFIG" ] && command -v node >/dev/null 2>&1 &&
+    CONFIG="$CONFIG" CAMPO="$1" node -e 'try{const c=JSON.parse(require("fs").readFileSync(process.env.CONFIG,"utf8"));const v=process.env.CAMPO.split(".").reduce((o,k)=>o&&o[k],c);if(v!==undefined)process.stdout.write(String(v))}catch{}'
+}
+# Guarda campos en oficina.config.json sin pisar el resto. Los valores van por variables de
+# entorno, así un nombre o una clave con comillas no rompen nada.
+guardar_config() {
+  CONFIG="$CONFIG" C_NOMBRE="${1:-}" C_ESPACIO="${2:-}" C_MOTOR="${3:-}" C_PRESET="${4:-}" C_CLAVE="${5:-}" node -e '
+    const fs=require("fs");const e=process.env;let c={};
+    try{c=JSON.parse(fs.readFileSync(e.CONFIG,"utf8"))}catch{}
+    if(e.C_NOMBRE)c.nombre=e.C_NOMBRE; if(e.C_ESPACIO)c.espacio=e.C_ESPACIO; if(e.C_MOTOR)c.motor=e.C_MOTOR;
+    if(e.C_PRESET){c.compatible=Object.assign({},c.compatible,{preset:e.C_PRESET})}
+    if(e.C_CLAVE){c.compatible=Object.assign({},c.compatible,{clave:e.C_CLAVE})}
+    fs.writeFileSync(e.CONFIG+".tmp",JSON.stringify(c,null,2)+"\n");fs.renameSync(e.CONFIG+".tmp",e.CONFIG);'
+}
+
+NOMBRE="$(leer_config nombre)"
+[ -z "$NOMBRE" ] && [ -f "$PROYECTO/.env" ] && NOMBRE="$(grep -E '^TU_NOMBRE=' "$PROYECTO/.env" | cut -d= -f2-)"
+if [ -z "$NOMBRE" ] && [ "$REVISAR" = 0 ]; then
+  read -r -p "   ¿Cómo te llamás? (así te llaman los agentes) " NOMBRE
 fi
-if command -v codex >/dev/null 2>&1; then
-  if codex login status 2>&1 | grep -qi "logged in"; then
-    ok "Sesión de Codex: $(codex login status 2>&1 | head -1)"
-  else
-    falta "Iniciar sesión en Codex: corré 'codex login' y elegí tu cuenta de ChatGPT"
+[ -n "$NOMBRE" ] && ok "Nombre: $NOMBRE" || warn "Sin nombre: los agentes te hablan sin nombrarte."
+
+ESPACIO="$(leer_config espacio)"
+ESPACIO="${ESPACIO:-${OFICINA_TRABAJO:-}}"
+if [ -z "$ESPACIO" ]; then
+  if [ -d "$HOME/Dropbox" ]; then sugerida="$HOME/Dropbox/oficina-trabajo"; else sugerida="$HOME/oficina-trabajo"; fi
+  if [ "$REVISAR" = 0 ]; then
+    read -r -p "   ¿Dónde guardo el trabajo de los agentes? [$sugerida] " ESPACIO
   fi
+  ESPACIO="${ESPACIO:-$sugerida}"
+  ESPACIO="${ESPACIO/#\~/$HOME}"
+fi
+ok "Carpeta de trabajo: $ESPACIO"
+
+MOTOR="$(leer_config motor)"
+PRESET="$(leer_config compatible.preset)"
+if [ -z "$MOTOR" ] && [ "$REVISAR" = 0 ]; then
+  echo "   ¿Con qué IA trabajan los agentes?"
+  echo "     1) ChatGPT (Codex): usa tu plan de ChatGPT"
+  echo "     2) Claude: usa tu suscripción de Claude"
+  echo "     3) DeepSeek: clave de API (paga, barata; servidores en China)"
+  echo "     4) Ollama: modelo local, gratis y sin internet (necesita una máquina potente)"
+  read -r -p "   Elegí 1, 2, 3 o 4 [1] " opcion
+  case "${opcion:-1}" in
+    2) MOTOR=claude ;;
+    3) MOTOR=compatible; PRESET=deepseek ;;
+    4) MOTOR=compatible; PRESET=ollama ;;
+    *) MOTOR=codex ;;
+  esac
+fi
+MOTOR="${MOTOR:-codex}"
+if [ "$REVISAR" = 0 ] && command -v node >/dev/null 2>&1; then
+  guardar_config "$NOMBRE" "$ESPACIO" "$MOTOR" "$PRESET" "" && ok "Guardado en oficina.config.json (cambialo cuando quieras desde ⚙ Configuración)."
 fi
 
+# --- 3) Motor de IA --------------------------------------------------------------------------
+echo; echo "— 3. Motor de IA: $MOTOR${PRESET:+ ($PRESET)}"
+instalar_cli() { # instalar_cli <comando> <paquete npm> <nombre>
+  if command -v "$1" >/dev/null 2>&1; then
+    ok "$3: $("$1" --version 2>/dev/null | head -1)"
+  else
+    info "Falta $3 (paquete npm $2)."
+    if confirmar "Lo instalo con npm install -g $2"; then
+      npm install -g "$2" && ok "$3 instalado." || falta "No pude instalar $3 (¿npm global necesita otro prefijo? probá: npm config set prefix ~/.npm-global)"
+    else
+      falta "$3"
+    fi
+  fi
+}
+case "$MOTOR" in
+  codex)
+    instalar_cli codex @openai/codex "Codex"
+    if command -v codex >/dev/null 2>&1; then
+      if codex login status 2>&1 | grep -qi "logged in"; then ok "Sesión de Codex: $(codex login status 2>&1 | head -1)"
+      else falta "Iniciar sesión en Codex: corré 'codex login' y elegí tu cuenta de ChatGPT"; fi
+    fi
+    ;;
+  claude)
+    instalar_cli claude @anthropic-ai/claude-code "Claude Code"
+    if [ -f "$HOME/.claude/.credentials.json" ] || [ -n "${ANTHROPIC_API_KEY:-}" ]; then ok "Claude Code tiene una sesión guardada."
+    else falta "Iniciar sesión en Claude: corré 'claude', seguí los pasos con tu cuenta y salí con /exit"; fi
+    ;;
+  compatible)
+    if [ "$PRESET" = ollama ]; then
+      if command -v ollama >/dev/null 2>&1; then
+        ok "Ollama instalado."
+        modelo="$(leer_config compatible.modelo)"; modelo="${modelo:-deepseek-r1:8b}"
+        if ollama list 2>/dev/null | grep -q "^${modelo%%:*}"; then ok "Modelo $modelo descargado."
+        elif confirmar "Descargo el modelo $modelo con ollama pull (unos 5 GB)"; then ollama pull "$modelo" || falta "No pude descargar $modelo"
+        else falta "Modelo de Ollama: ollama pull $modelo"; fi
+      else
+        falta "Instalar Ollama desde https://ollama.com/download (y después correr este script de nuevo)"
+      fi
+    else
+      if [ "$(leer_config compatible.clave)" != "" ]; then ok "Clave de DeepSeek guardada."
+      elif [ "$REVISAR" = 0 ]; then
+        read -r -s -p "   Pegá tu clave de API de DeepSeek (no se ve al escribir; Enter para después): " clave; echo
+        if [ -n "$clave" ]; then guardar_config "" "" "" deepseek "$clave" && ok "Clave guardada en oficina.config.json (no se sube a GitHub)."
+        else falta "Clave de DeepSeek: cargala en ⚙ Configuración"; fi
+      else falta "Clave de DeepSeek"; fi
+    fi
+    ;;
+esac
+
 # --- 3) ffmpeg, whisper.cpp y modelo de dictado ------------------------------------------------
-echo; echo "— 3. Dictado (whisper.cpp)"
+echo; echo "— 4. Dictado (whisper.cpp)"
 paquetes=()
 for p in ffmpeg whisper.cpp libggml0-backend-vulkan vulkan-tools; do
   dpkg -s "$p" >/dev/null 2>&1 || paquetes+=("$p")
@@ -157,7 +249,7 @@ fi
 descargar "$MODELOS/ggml-silero-v5.1.2.bin" "https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin" "0,9 MB" 800000
 
 # --- 4) Piper y la voz de Nexa ---------------------------------------------------------------
-echo; echo "— 4. Voz de Nexa (Piper)"
+echo; echo "— 5. Voz de Nexa (Piper)"
 case "$(uname -m)" in
   x86_64) PAQUETE_PIPER="piper_linux_x86_64.tar.gz" ;;
   aarch64 | arm64) PAQUETE_PIPER="piper_linux_aarch64.tar.gz" ;;
@@ -183,12 +275,12 @@ descargar "$PIPER/voces/$VOZ.onnx" "$BASE_VOZ/$VOZ.onnx" "114 MB" 100000000
 descargar "$PIPER/voces/$VOZ.onnx.json" "$BASE_VOZ/$VOZ.onnx.json" "7 KB" 1000
 
 # --- 5) Configuración y carpeta de trabajo ---------------------------------------------------
-echo; echo "— 5. Configuración"
+echo; echo "— 6. Configuración"
 if [ -f "$PROYECTO/.env" ]; then
-  ok ".env presente (lo comparte Dropbox entre tus máquinas): MOTOR=$(grep -E '^MOTOR=' "$PROYECTO/.env" | cut -d= -f2)"
+  ok ".env presente."
 elif [ "$REVISAR" = 0 ]; then
   cp "$PROYECTO/.env.example" "$PROYECTO/.env" && sed -i 's/^MOTOR=api$/MOTOR=codex/' "$PROYECTO/.env"
-  ok ".env creado desde .env.example con MOTOR=codex (completá TU_NOMBRE si querés)."
+  ok ".env creado desde .env.example (el recorrido narrado responde con Codex)."
 else
   falta ".env (se crea desde .env.example)"
 fi
@@ -199,7 +291,7 @@ else
 fi
 
 # --- 6) Prueba de punta a punta: Nexa dice una frase y Whisper la transcribe -----------------
-echo; echo "— 6. Prueba"
+echo; echo "— 7. Prueba"
 if [ -x "$PIPER/bin/piper/piper" ] && [ -f "$PIPER/voces/$VOZ.onnx" ] && command -v whisper-cli >/dev/null 2>&1 && [ -f "${MODELO:-}" ] && command -v ffmpeg >/dev/null 2>&1; then
   tmp="$(mktemp -d)"
   echo "Hola, soy Nexa. La oficina está lista en esta computadora." |
@@ -230,6 +322,5 @@ fi
 echo "  cd \"$PROYECTO\" && npm run dev"
 echo "  y abrí http://127.0.0.1:5180/ en Chrome"
 echo
-info "Si la oficina ya está abierta en otra computadora, esta solo mira (ves las tareas, no podés"
-info "encargar): cerrala allá con Ctrl + C y en menos de un minuto podés trabajar desde acá. Si la otra"
-info "se apagó de golpe, la oficina se libera sola a los 2 minutos."
+info "Si la oficina ya está abierta en otra computadora, esta queda en solo mirar: tocá"
+info "«Usar la oficina acá» para trabajar desde esta y la otra pasa a solo mirar."

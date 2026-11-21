@@ -3,6 +3,8 @@ import { Markdown, textoPlano } from './Markdown';
 import type { Tarea } from './trabajo';
 import { VELOCIDADES, vozNexa } from './voz';
 
+const NOMBRE_CORTO = { codex: 'ChatGPT', claude: 'Claude', compatible: 'un modelo compatible con OpenAI' } as const;
+
 interface Props {
   tarea: Tarea;
   nombreAgente: string;
@@ -56,6 +58,7 @@ export function Lector({ tarea, nombreAgente, velocidad, onVelocidad, onCerrar }
           <div>
             <div className="sub">
               {nombreAgente} · versión {tarea.version}
+              {tarea.motor ? ` · hecho con ${NOMBRE_CORTO[tarea.motor]}` : ''}
             </div>
             <h2>{tarea.titulo ?? tarea.encargo}</h2>
           </div>

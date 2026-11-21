@@ -1,7 +1,7 @@
 import { horaChile } from '@jules/oficina';
 
 /**
- * Fecha cuya hora en America/Bogota es `hora` (0–24, decimal), tomando como base el día de
+ * Fecha cuya hora en la zona de la oficina es `hora` (0–24, decimal), tomando como base el día de
  * `ahora`. Sirve para simular la hora con la prop `horaChile` de `<Oficina>`.
  */
 export function fechaChileA(hora: number, ahora: Date = new Date()): Date {

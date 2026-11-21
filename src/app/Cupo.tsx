@@ -1,15 +1,15 @@
 import type { Cupo as DatosCupo, VentanaCupo } from './trabajo';
+import { zonaActual } from './zona';
 
-const ZONA = 'America/Bogota';
 
 /** «se renueva 22:46» si es hoy, «se renueva jue 27, 09:10» si no. */
 function renueva(iso: string | undefined, ahora: Date): string {
   if (!iso) return '';
   const fecha = new Date(iso);
-  const dia = (d: Date) => d.toLocaleDateString('es-AR', { timeZone: ZONA });
-  const hora = fecha.toLocaleTimeString('es-AR', { timeZone: ZONA, hour: '2-digit', minute: '2-digit' });
+  const dia = (d: Date) => d.toLocaleDateString('es-AR', { timeZone: zonaActual() });
+  const hora = fecha.toLocaleTimeString('es-AR', { timeZone: zonaActual(), hour: '2-digit', minute: '2-digit' });
   if (dia(fecha) === dia(ahora)) return `se renueva a las ${hora}`;
-  const cuando = fecha.toLocaleDateString('es-AR', { timeZone: ZONA, weekday: 'short', day: 'numeric' });
+  const cuando = fecha.toLocaleDateString('es-AR', { timeZone: zonaActual(), weekday: 'short', day: 'numeric' });
   return `se renueva el ${cuando}, ${hora}`;
 }
 
@@ -57,7 +57,7 @@ export function Cupo({ cupo }: { cupo: DatosCupo | null | undefined }) {
     );
   }
   const leido = new Date(cupo.leido).toLocaleTimeString('es-AR', {
-    timeZone: ZONA,
+    timeZone: zonaActual(),
     hour: '2-digit',
     minute: '2-digit',
   });

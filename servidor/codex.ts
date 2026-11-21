@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { lanzador } from './comandos';
 import { registrarSesion } from './cupo';
 
 /**
@@ -16,7 +17,7 @@ import { registrarSesion } from './cupo';
 
 export type ResultadoCodex =
   | { texto: string }
-  | { motivo: 'timeout' | 'error_api' | 'malformada' | 'cancelado' };
+  | { motivo: 'timeout' | 'error_api' | 'malformada' | 'cancelado' | 'sin_conexion' | 'sin_configurar' };
 
 export interface OpcionesCodex {
   /** Instrucciones del agente (el prompt de sistema). */
@@ -91,7 +92,8 @@ export const ejecutarCodex: EjecutarCodex = async ({
   let idSesion = '';
   try {
     const codigo = await new Promise<number | 'timeout' | 'error' | 'cancelado'>((resolver) => {
-      const hijo = spawn('codex', args, { cwd: carpeta, stdio: ['pipe', 'pipe', 'pipe'] });
+      const { comando, antes } = lanzador('codex');
+      const hijo = spawn(comando, [...antes, ...args], { cwd: carpeta, stdio: ['pipe', 'pipe', 'pipe'] });
       // Codex anuncia «session id: …» al empezar: con eso se lee el cupo de su archivo de sesión.
       let encabezado = '';
       const mirar = (d: Buffer) => {
@@ -102,7 +104,7 @@ export const ejecutarCodex: EjecutarCodex = async ({
       hijo.stdout.on('data', mirar);
       hijo.stderr.on('data', mirar);
       const terminar = (motivo: 'timeout' | 'cancelado') => {
-        hijo.kill('SIGTERM');
+        hijo.kill();
         resolver(motivo);
       };
       const reloj = setTimeout(() => terminar('timeout'), timeoutMs);

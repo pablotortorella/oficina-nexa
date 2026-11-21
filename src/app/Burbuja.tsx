@@ -3,7 +3,14 @@ import type { Resumen } from './resumen';
 import type { Cupo as DatosCupo } from './trabajo';
 
 /** Marca y burbuja de Nexa: resumen de la oficina y qué decisiones esperan. */
-export function Burbuja({ resumen, cupo }: { resumen: Resumen; cupo?: DatosCupo | null }) {
+interface Props {
+  resumen: Resumen;
+  cupo?: DatosCupo | null;
+  motor?: string;
+  nombreMotor?: string;
+}
+
+export function Burbuja({ resumen, cupo, motor, nombreMotor }: Props) {
   const { linea, mensaje } = resumen;
   return (
     <header className="hud burbuja" aria-live="polite">
@@ -16,7 +23,13 @@ export function Burbuja({ resumen, cupo }: { resumen: Resumen; cupo?: DatosCupo 
         {mensaje.negrita && <b>{mensaje.negrita}</b>}
         {mensaje.resto}
       </p>
-      <Cupo cupo={cupo} />
+      {motor === 'codex' || !motor ? (
+        <Cupo cupo={cupo} />
+      ) : (
+        <p className="cupo nota">
+          Trabajan con {nombreMotor ?? motor}. El cupo solo se puede ver con ChatGPT.
+        </p>
+      )}
     </header>
   );
 }
