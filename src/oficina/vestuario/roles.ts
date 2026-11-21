@@ -14,6 +14,7 @@ export const LOOK_POR_ROL: Record<string, Partial<Atuendo>> = {
   Integrador: { top: 'blazer', topColor: '#2f3e63', hair: 'corto', acc: [] },
   'Ejecutivo de ventas': { top: 'blazer', topColor: '#3b3f46', hair: 'corto', acc: ['audifonos'] },
   'Analista comercial': { top: 'camisa', topColor: '#e9ecef', hair: 'largo', acc: ['lentes'] },
+  'Ejecutiva comercial': { top: 'blazer', topColor: '#b5523b', bottom: 'falda', hair: 'largo', acc: [] },
   Redactor: { top: 'poleron', topColor: '#d9825f', hair: 'largo', acc: [] },
   Guionista: { top: 'polera', topColor: '#d8b56a', hair: 'rizos', acc: ['gorro'], print: '★' },
   'Editor de video': { top: 'poleron', topColor: '#151719', hair: 'corto', acc: ['gorra'] },

@@ -137,7 +137,11 @@ export function PanelTrabajo({
             El servidor de la oficina no responde. Revisá que esté corriendo <code>npm run dev</code>.
           </p>
         ) : (
-          <p className="nota">Tocá a Andrés, Víctor o Joaquín para encargarles algo.</p>
+          <p className="nota">
+            {oficina?.agentes.length
+              ? `Tocá a ${new Intl.ListFormat('es', { type: 'disjunction' }).format(oficina.agentes.map((a) => a.nombre))} para encargarles algo.`
+              : 'Tocá a un agente para encargarle algo.'}
+          </p>
         )}
         {oficina && <p className="nota">Todo lo que hacen queda en {oficina.espacio}</p>}
       </aside>

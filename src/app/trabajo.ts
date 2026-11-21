@@ -109,6 +109,7 @@ const ACTIVIDAD: Record<string, Actividad> = {
   redactor: 'escribiendo',
   investigador: 'leyendo',
   talleres: 'pensando',
+  comercial: 'hablando',
 };
 
 export const TEXTO_ESTADO: Record<EstadoTarea, string> = {
