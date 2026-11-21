@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+
+# Voces de Elkis y Jules del recorrido: licencia de uso personal, no se redistribuyen
+# (ver LICENCIAS.md). Copialas del zip original de Elkis Dev para tener el recorrido con voz.
+public/presentacion/**/*.mp3
+public/presentacion/dueto-recorrido.alineacion.json
