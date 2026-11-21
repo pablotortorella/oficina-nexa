@@ -88,6 +88,14 @@ export interface DatosConfig {
   presets: Record<'deepseek' | 'ollama' | 'otro', { url: string; modelo: string; nombre: string }>;
 }
 
+/** Lo que el modal de detalles pide al servidor de un agente. */
+export interface DatosAgente {
+  /** Comentarios guardados en el contexto del agente, del más viejo al más nuevo. */
+  aprendizajes: string[];
+  motor: Motor;
+  nombreMotor: string;
+}
+
 export type AccionTarea = 'iniciar' | 'aprobar' | 'cambios' | 'descartar' | 'cancelar' | 'reintentar';
 
 const RUTA = '/api/trabajo';
@@ -105,6 +113,9 @@ async function pedir<T>(ruta: string, cuerpo?: unknown): Promise<T> {
 }
 
 export const leerOficina = () => pedir<EstadoOficina>(RUTA);
+
+export const leerDatosAgente = (agenteId: string) =>
+  pedir<DatosAgente>(`${RUTA}/agentes/${encodeURIComponent(agenteId)}`);
 
 export const leerConfiguracion = () => pedir<DatosConfig>(`${RUTA}/config`);
 

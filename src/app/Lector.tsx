@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { retratoDe } from './avatares';
 import { Markdown, textoPlano } from './Markdown';
 import type { Tarea } from './trabajo';
 import { VELOCIDADES, vozNexa } from './voz';
@@ -30,6 +31,7 @@ export function Lector({ tarea, nombreAgente, velocidad, onVelocidad, onCerrar }
   }, [onCerrar]);
 
   const texto = tarea.resultado ?? '';
+  const retrato = retratoDe(tarea.agenteId);
 
   const copiar = async (que: 'texto' | 'markdown') => {
     try {
@@ -55,12 +57,24 @@ export function Lector({ tarea, nombreAgente, velocidad, onVelocidad, onCerrar }
         onClick={(e) => e.stopPropagation()}
       >
         <header className="lector-cabecera">
-          <div>
-            <div className="sub">
-              {nombreAgente} · versión {tarea.version}
-              {tarea.motor ? ` · hecho con ${NOMBRE_CORTO[tarea.motor]}` : ''}
+          <div className="lector-titulo">
+            {retrato && (
+              <img
+                className="lector-retrato"
+                src={retrato}
+                alt=""
+                onError={(e) => {
+                  e.currentTarget.hidden = true;
+                }}
+              />
+            )}
+            <div>
+              <div className="sub">
+                {nombreAgente} · versión {tarea.version}
+                {tarea.motor ? ` · hecho con ${NOMBRE_CORTO[tarea.motor]}` : ''}
+              </div>
+              <h2>{tarea.titulo ?? tarea.encargo}</h2>
             </div>
-            <h2>{tarea.titulo ?? tarea.encargo}</h2>
           </div>
           <button ref={cerrar} type="button" className="btn-cerrar" onClick={onCerrar} aria-label="Cerrar">
             ×

@@ -39,6 +39,7 @@ import { Vestidor } from './Vestidor';
 import { PanelAgentes } from './PanelAgentes';
 import { PanelTrabajo } from './PanelTrabajo';
 import { Lector } from './Lector';
+import { DetalleAgente } from './DetalleAgente';
 import { Configuracion } from './Configuracion';
 import { alCambiarZona } from './zona';
 import { vozNexa } from './voz';
@@ -88,6 +89,8 @@ export function Lab() {
   const [atuendos, setAtuendos] = useState<AtuendosGuardados>(cargarAtuendos);
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const [vestidorAbierto, setVestidorAbierto] = useState(false);
+  const [detallesAbiertos, setDetallesAbiertos] = useState(false);
+  const cerrarDetalles = useCallback(() => setDetallesAbiertos(false), []);
   const [metricas, setMetricas] = useState<MetricasRender>({ webgl: true });
   const [calidad, setCalidad] = useState<Calidad>('auto');
   const [visible, setVisible] = useState(true);
@@ -208,6 +211,7 @@ export function Lab() {
   );
   const indice = agentes.findIndex((a) => a.id === seleccionadoId);
   const seleccionado = agentes[indice];
+  const agenteTrabajo = oficina?.agentes.find((a) => a.id === seleccionadoId);
   const horaSimulada = useMemo(() => (hora === null ? undefined : fechaChileA(hora)), [hora]);
   const resumen = useMemo(() => resumir(agentes), [agentes]);
   const alMedir = useCallback((m: MetricasRender) => setMetricas(m), []);
@@ -244,6 +248,7 @@ export function Lab() {
     setSeleccionadoId(id);
     if (id === null) {
       setVestidorAbierto(false);
+      setDetallesAbiertos(false);
       setEnfoquePanel(false);
     }
   };
@@ -371,10 +376,11 @@ export function Lab() {
       <PanelTrabajo
         oficina={oficina}
         sinServidor={sinServidor}
-        agente={oficina?.agentes.find((a) => a.id === seleccionadoId)}
+        agente={agenteTrabajo}
         estado={seleccionado?.estado}
         onCambio={() => void sondear()}
         onVestir={() => setVestidorAbierto(true)}
+        onDetalles={() => setDetallesAbiertos(true)}
         onLeer={(tarea) =>
           setLeyendo({
             tarea,
@@ -390,6 +396,7 @@ export function Lab() {
           onGuardado={() => void sondear()}
         />
       )}
+      {detallesAbiertos && agenteTrabajo && <DetalleAgente agente={agenteTrabajo} onCerrar={cerrarDetalles} />}
       {leyendo && (
         <Lector
           tarea={

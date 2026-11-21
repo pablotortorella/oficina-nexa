@@ -28,6 +28,8 @@ interface Props {
   /** Pide un sondeo inmediato después de una acción. */
   onCambio: () => void;
   onVestir: () => void;
+  /** Abre la ventana con los detalles del agente. */
+  onDetalles: () => void;
   /** Abre el lector con el resultado de una tarea. */
   onLeer: (tarea: Tarea) => void;
   /** Nexa escucha mientras grabás y piensa mientras transcribe. */
@@ -98,6 +100,7 @@ export function PanelTrabajo({
   estado,
   onCambio,
   onVestir,
+  onDetalles,
   onLeer,
   onMic,
 }: Props) {
@@ -186,13 +189,24 @@ export function PanelTrabajo({
   return (
     <aside className="hud detalle trabajo" aria-live="polite">
       <AvisoOtraCompu oficina={oficina} onCambio={onCambio} />
-      <div>
-        <h2>{agente.nombre}</h2>
-        <div className="sub">
-          {agente.puesto}
-          {depto ? ` · ${depto.nombre}` : ''}
-          {agente.web ? ' · busca en la web' : ''}
+      <div className="detalle-cabecera">
+        <div>
+          <h2>{agente.nombre}</h2>
+          <div className="sub">
+            {agente.puesto}
+            {depto ? ` · ${depto.nombre}` : ''}
+            {agente.web ? ' · busca en la web' : ''}
+          </div>
         </div>
+        <button
+          type="button"
+          className="btn"
+          onClick={onDetalles}
+          aria-label={`Ver los detalles de ${agente.nombre}`}
+          title={`Características y aprendizajes de ${agente.nombre}`}
+        >
+          Detalles
+        </button>
       </div>
 
       {activa ? (

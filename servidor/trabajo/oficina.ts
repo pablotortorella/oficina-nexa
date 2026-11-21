@@ -130,6 +130,27 @@ const comentarioDe = (texto: unknown): string | undefined =>
   typeof texto === 'string' && texto.trim() ? texto.trim().slice(0, MAX_ENCARGO) : undefined;
 
 const ENCABEZADO_APRENDIZAJES = '## Aprendizajes';
+/** Cuántos aprendizajes se devuelven (los más nuevos) y cuánto texto como máximo cada uno. */
+const MAX_APRENDIZAJES = 50;
+const MAX_LARGO_APRENDIZAJE = 400;
+
+/**
+ * Los comentarios que `aprender()` guardó en la sección «Aprendizajes» de un `contexto.md`:
+ * una entrada por viñeta, desde el encabezado hasta el próximo, de la más vieja a la más nueva.
+ * La frase de introducción de la sección no es una viñeta y no se incluye.
+ */
+export function extraerAprendizajes(contexto: string): string[] {
+  const lineas = contexto.split('\n');
+  const inicio = lineas.findIndex((l) => l.trim() === ENCABEZADO_APRENDIZAJES);
+  if (inicio < 0) return [];
+  const entradas: string[] = [];
+  for (const linea of lineas.slice(inicio + 1)) {
+    if (/^#{1,6}\s/.test(linea)) break;
+    const punto = /^\s*[-*]\s+(.*\S)\s*$/.exec(linea);
+    if (punto?.[1]) entradas.push(punto[1].slice(0, MAX_LARGO_APRENDIZAJE));
+  }
+  return entradas.slice(-MAX_APRENDIZAJES);
+}
 
 async function leerRecortado(ruta: string): Promise<string> {
   const texto = await readFile(ruta, 'utf8').catch(() => '');
@@ -352,6 +373,15 @@ export class OficinaDeTrabajo {
       })),
       tareas: this.tareas.slice(-60),
     };
+  }
+
+  /** Los aprendizajes del agente (`contexto.md`), o `null` si no existe ese agente. */
+  async aprendizajes(agenteId: string): Promise<string[] | null> {
+    await this.listo;
+    const agente = buscarAgente(agenteId);
+    if (!agente) return null;
+    const contexto = await readFile(join(this.espacio, agente.carpeta, 'contexto.md'), 'utf8').catch(() => '');
+    return extraerAprendizajes(contexto);
   }
 
   private buscar(id: string) {

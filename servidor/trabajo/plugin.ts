@@ -20,6 +20,8 @@ import { espacioPorDefecto, OficinaDeTrabajo } from './oficina';
  * Plugin de Vite con la API de la oficina que trabaja, con las mismas defensas que
  * `/api/orden` (solo este equipo y esta página):
  * - `GET  /api/trabajo`: agentes, tareas y el cupo de la suscripción de ChatGPT (Codex).
+ * - `GET  /api/trabajo/agentes/:id`: lo que el modal de detalles muestra de un agente: sus
+ *   aprendizajes (la sección «Aprendizajes» de su `contexto.md`) y la IA con la que trabaja.
  * - `POST /api/trabajo/tareas` `{ agenteId, encargo }`: nuevo encargo.
  * - `POST /api/trabajo/tareas/:id/:accion` `{ texto? }`: iniciar, aprobar, cambios,
  *   descartar, cancelar o reintentar.
@@ -76,6 +78,19 @@ export function crearManejadorTrabajo(
           config: { ...publica, nombre: publica.nombre ?? (entorno().TU_NOMBRE?.trim() || undefined) },
           motores: MOTORES.map((id) => ({ id, nombre: NOMBRE_MOTOR[id] })),
           presets: PRESETS,
+        });
+      }
+      const agente = /^\/agentes\/([a-z0-9_-]{1,40})$/.exec(ruta);
+      if (req.method === 'GET' && agente) {
+        const id = agente[1] ?? '';
+        const aprendizajes = await oficina().aprendizajes(id);
+        if (aprendizajes === null) return responder(res, 404, { error: 'agente desconocido' });
+        const c = leerConfig();
+        const motor: Motor = c.motorPorAgente?.[id] ?? c.motor ?? 'codex';
+        return responder(res, 200, {
+          aprendizajes,
+          motor,
+          nombreMotor: motor === 'compatible' ? compatibleEfectivo().nombre : NOMBRE_MOTOR[motor],
         });
       }
       if (req.method !== 'POST') {
