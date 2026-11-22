@@ -39,7 +39,7 @@ function Falta($t) { Write-Host "XX  $t" -ForegroundColor Red; $Pendientes.Add($
 
 function Confirmar($pregunta) {
   if ($Revisar) { return $false }
-  $r = Read-Host "    ¿$pregunta? [S/n]"
+  $r = Read-Host "    ¿${pregunta}? [S/n]"
   return ($r -eq '' -or $r -match '^[sSyY]')
 }
 
@@ -192,7 +192,7 @@ switch ($Motor) {
       if ($c.compatible -and $c.compatible.clave) { Ok 'Clave de DeepSeek guardada.' }
       elseif (-not $Revisar) {
         $segura = Read-Host '    Pegá tu clave de API de DeepSeek (Enter para después)' -AsSecureString
-        $clave = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura))
+        $clave = [System.Net.NetworkCredential]::new('', $segura).Password
         if ($clave) {
           $comp = (Leer-Config).compatible; if (-not $comp) { $comp = [pscustomobject]@{} }
           $comp | Add-Member -NotePropertyName preset -NotePropertyValue 'deepseek' -Force
