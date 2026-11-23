@@ -90,6 +90,7 @@ export function Lab() {
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const [vestidorAbierto, setVestidorAbierto] = useState(false);
   const [detallesAbiertos, setDetallesAbiertos] = useState(false);
+  const hayVentanaAbierta = configAbierta || detallesAbiertos || leyendo !== null || vestidorAbierto;
   const cerrarDetalles = useCallback(() => setDetallesAbiertos(false), []);
   const [metricas, setMetricas] = useState<MetricasRender>({ webgl: true });
   const [calidad, setCalidad] = useState<Calidad>('auto');
@@ -133,6 +134,15 @@ export function Lab() {
     }
   }, []);
 
+  /** Esc o el botón «Vista general»: sale del ambiente, suelta el enfoque y deja de seguir a Nexa. */
+  const irAVistaGeneral = useCallback(() => {
+    setAmbienteId(null);
+    setEnfoquePanel(false);
+    siguiendoNexaRef.current = false;
+    setSiguiendoNexa(false);
+    setVista((v) => v + 1);
+  }, []);
+
   useEffect(() => {
     try {
       almacenLocal()?.setItem(CLAVE_PANEL_AGENTES, panelAgentes ? 'visible' : 'oculto');
@@ -146,6 +156,11 @@ export function Lab() {
       const destino = e.target as HTMLElement | null;
       if (destino && (['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName) || destino.isContentEditable)) return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      // Con una ventana abierta (configuración, detalles, vestidor, lector), Esc solo la cierra.
+      if (e.key === 'Escape') {
+        if (!hayVentanaAbierta) irAVistaGeneral();
+        return;
+      }
       const tecla = e.key.toLowerCase();
       if (tecla === 'r') setPanelFps((v) => !v);
       else if (tecla === 'a') setPanelAgentes((v) => !v);
@@ -153,7 +168,7 @@ export function Lab() {
     };
     window.addEventListener('keydown', alTecla);
     return () => window.removeEventListener('keydown', alTecla);
-  }, [alternarNexa]);
+  }, [alternarNexa, irAVistaGeneral, hayVentanaAbierta]);
 
   // La voz de Nexa mueve su boca; el micrófono la pone a escuchar o a pensar.
   useEffect(() => vozNexa.suscribir((e) => setVoz({ hablando: e.hablando, nivel: e.nivel })), []);
@@ -365,13 +380,7 @@ export function Lab() {
       <IndicadorAmbiente
         ambienteId={ambienteId}
         onSalir={() => setAmbienteId(null)}
-        onVistaGeneral={() => {
-          setAmbienteId(null);
-          setEnfoquePanel(false);
-          siguiendoNexaRef.current = false;
-          setSiguiendoNexa(false);
-          setVista((v) => v + 1);
-        }}
+        onVistaGeneral={irAVistaGeneral}
       />
       <PanelTrabajo
         oficina={oficina}

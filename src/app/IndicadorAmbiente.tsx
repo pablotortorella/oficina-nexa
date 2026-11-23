@@ -7,7 +7,7 @@ interface Props {
   onVistaGeneral: () => void;
 }
 
-/** Nombre del ambiente activo con su botón «Salir», y «Vista general» siempre a mano. */
+/** Nombre del ambiente activo con su botón «Salir», y «Vista general» (tecla Esc) siempre a mano. */
 export function IndicadorAmbiente({ ambienteId, onSalir, onVistaGeneral }: Props) {
   const ambiente = plano.ambientes.find((a) => a.id === ambienteId);
   return (
@@ -23,8 +23,13 @@ export function IndicadorAmbiente({ ambienteId, onSalir, onVistaGeneral }: Props
           Salir
         </button>
       )}
-      <button type="button" className="btn" onClick={onVistaGeneral}>
-        Vista general
+      <button
+        type="button"
+        className="btn btn-con-tecla"
+        onClick={onVistaGeneral}
+        title="Volver a la vista general de la casa (tecla Esc)"
+      >
+        Vista general <kbd>Esc</kbd>
       </button>
     </div>
   );

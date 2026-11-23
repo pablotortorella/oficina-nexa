@@ -2225,7 +2225,8 @@ kbd {
     display: none;
   }
 
-  .atajos .btn-atajo kbd {
+  .atajos .btn-atajo kbd,
+  .btn-con-tecla kbd {
     display: none;
   }
 
@@ -2348,4 +2349,12 @@ kbd {
   .btn-config {
     right: var(--der);
   }
+}
+
+/* ---- Botón con su tecla (Vista general · Esc) ---- */
+.btn-con-tecla {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
