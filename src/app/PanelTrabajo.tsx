@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { departamentosBase } from '@jules/oficina';
 import type { EstadoAgente } from '@jules/oficina';
+import { alCtrlEnter, ctrlEnterEnviaFormulario } from './atajos';
 import { BotonMic } from './BotonMic';
 import { textoPlano } from './Markdown';
 import {
@@ -277,7 +278,8 @@ export function PanelTrabajo({
                 <textarea
                   value={cambios}
                   onChange={(e) => setCambios(e.target.value)}
-                  placeholder="Qué querés que cambie…"
+                  onKeyDown={ctrlEnterEnviaFormulario}
+                  placeholder="Qué querés que cambie… (Ctrl+Enter para enviar)"
                   rows={3}
                   maxLength={2000}
                   autoFocus
@@ -286,7 +288,12 @@ export function PanelTrabajo({
                 <BotonMic etiqueta="Dictar los cambios" onTexto={(t) => setCambios((p) => sumar(p, t))} onEstado={onMic} />
               </div>
               <div className="acciones">
-                <button type="submit" className="btn principal" disabled={ocupado || !cambios.trim()}>
+                <button
+                  type="submit"
+                  className="btn principal"
+                  disabled={ocupado || !cambios.trim()}
+                  title="Enviar cambios (Ctrl+Enter)"
+                >
                   Enviar cambios
                 </button>
                 <button type="button" className="btn" onClick={() => setPidiendoCambios(false)}>
@@ -303,7 +310,10 @@ export function PanelTrabajo({
                     setComentario(e.target.value);
                     if (e.target.value.trim()) setEmpujon(false);
                   }}
-                  placeholder={`Comentario para ${agente.nombre} (opcional): qué te gustó, qué no. Lo va a tener en cuenta.`}
+                  onKeyDown={alCtrlEnter(() => {
+                    if (!ocupado) void sobre(activa, 'aprobar', comentario.trim() || undefined);
+                  })}
+                  placeholder={`Comentario para ${agente.nombre} (opcional): qué te gustó, qué no. Lo va a tener en cuenta. Ctrl+Enter aprueba.`}
                   rows={2}
                   maxLength={2000}
                   aria-label={`Comentario para ${agente.nombre}`}
@@ -324,6 +334,7 @@ export function PanelTrabajo({
                   className="btn principal"
                   disabled={ocupado}
                   onClick={() => sobre(activa, 'aprobar', comentario.trim() || undefined)}
+                  title="Aprobar con el comentario (Ctrl+Enter)"
                 >
                   Aprobar
                 </button>
@@ -364,10 +375,8 @@ export function PanelTrabajo({
           <textarea
             value={encargo}
             onChange={(e) => setEncargo(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit();
-            }}
-            placeholder={`Nuevo encargo para ${agente.nombre}…`}
+            onKeyDown={ctrlEnterEnviaFormulario}
+            placeholder={`Nuevo encargo para ${agente.nombre}… (Ctrl+Enter para enviar)`}
             rows={3}
             maxLength={2000}
             aria-label={`Encargo para ${agente.nombre}`}
@@ -388,6 +397,7 @@ export function PanelTrabajo({
             type="submit"
             className="btn principal"
             disabled={ocupado || !encargo.trim() || Boolean(oficina?.abiertaEn)}
+            title="Encargar (Ctrl+Enter)"
           >
             {ocupadoAgente ? 'Encargar (queda en cola)' : 'Encargar'}
           </button>
